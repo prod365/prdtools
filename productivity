@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+
+# Productivity: Production, Products, and Productivity.
+
+
+
+# -----------------------------------------------------------------------------
+# Environment checks and minor change
+# -----------------------------------------------------------------------------
+
+# Shell is non-interactive. Be done now
+[[ $- =~ i ]] || return
+
+# Minimal bash version (4.2 mostly for "typeset -n")
+if [[ "${BASH_VERSINFO[0]:-}${BASH_VERSINFO[1]:-0}" -lt 42 ]]; then
+	echo >&2 "This requires bash >= 4.2 to run."
+	return 1 2>/dev/null
+	exit 1
+fi
+
+if [ -z "$HOME" ] || ! [ -d "$HOME" ]; then
+	echo "HOME is not defined or not a real folder. Please set it to a valid value"
+	return
+fi
+
+# If no debug override has been done yet
+if [[ -z "${PS4:-}" ]] || [[ "$PS4" == "+ " ]]; then
+	PS4=' (${BASH_SOURCE##*/}:$LINENO ${FUNCNAME[0]:-main})  '
+	# Add a dark shadow to debug prompt
+	PS4="\033[2m$PS4\033[0m"
+fi
+
+
+
+# -----------------------------------------------------------------------------
+# Helper subs
+# -----------------------------------------------------------------------------
+
+
+
+# -----------------------------------------------------------------------------
+# Environement
+# -----------------------------------------------------------------------------
+
+function productivity::path_binadd {
+	productivity::path_add "PATH" $@
+}
+
+function productivity::path_manadd {
+	productivity::path_add "MANPATH" $@
+}
+
+function productivity::path_libadd {
+	productivity::path_add "LD_LIBRARY_PATH" $@
+}
+
+
+function productivity::path_add {
+	typeset var="$1"; shift
+	typeset where="$1"
+	if [ "$where" = "before" ] || [ "$where" = "after" ]; then
+		shift
+	fi
+
+	for newpath in "$@"; do
+		typeset OIFS="$IFS"
+		IFS=":"
+		for p in $PATH; do
+			[ "$newpath" = "$p" ] && {
+				IFS="$OIFS"
+				continue 2
+			}
+		done
+		IFS="$OIFS"
+		# Where to add the path
+		if [ "$where" = "before" ]; then
+			eval export $var="$newpath:\$$var"
+		else
+			eval export $var="\$$var:$newpath"
+		fi
+	done
+
+}
+
+# -----------------------------------------------------------------------------
+# Prompt
+# -----------------------------------------------------------------------------
+
+# Only show at startup
+#if [[ -z "$PRDVTY_LOADTIME" ]] && [[ -n "$PROMPT_COMMAND" ]]; then
+#	echo >&2 "Warning: \$PROMPT_COMMAND is already set: '$PROMPT_COMMAND'"
+#fi
+
+typeset -i PRDVTY_LOADTIME="$(date +%s)"
+typeset -a PRDVTY_PROMPTFUNCCB=()
+function productivity::promptfunc {
+	typeset retcode=${1:-$?}
+
+	# Call our post-exec hooks
+	productivity::postexec "$retcode"
+
+	# Reload configuration if witness flag is present
+	if [ -s "$MYSHELL_DIR/.reload" ]; then
+		typeset time="$(cat $MYSHELL_DIR/.reload | tr -cd '[0-9]')"
+		[ "${time:-0}" -gt "$PRDVTY_LOADTIME" ] && productivity::reload
+		PRDVTY_LOADTIME="$(date +%s)"
+	fi
+
+	typeset cb
+	for cb in ${PRDVTY_PROMPTFUNCCB[@]}; do
+		[ -n "$cb" ] || continue
+		$cb $retcode
+	done
+
+}
+
+function productivity::promptfunc_register {
+	PRDVTY_PROMPTFUNCCB+=("$*")
+}
+
+
+typeset -a PRDVTY_PREEXECCB=() PRDVTY_POSTEXECCB=()
+typeset -i PRDVTY_PREEXECTIME=0
+typeset    PRDVTY_PREEXECCMD=
+function productivity::preexec {
+	# Skip our own PROMPT_COMMAND to reset our stats
+	[ "${BASH_COMMAND%% *}" == "productivity::promptfunc" ] && return
+
+	typeset cb
+	for cb in ${PRDVTY_PREEXECCB[@]}; do
+		[ -n "$cb" ] || continue
+		$cb
+	done
+	PRDVTY_PREEXECTIME="${SECONDS:-$(date +%s)}"
+	PRDVTY_PREEXECCMD+="${PRDVTY_PREEXECCMD:+ | }$BASH_COMMAND"
+	#echo "Preeec: $PRDVTY_PREEXECCMD at $productivity::PREEXECTIME"
+}
+function productivity::postexec {
+	typeset retcode="$1"
+
+	#echo "Postexec: took $((${SECONDS:-$(date +%s)} - $PRDVTY_PREEXECTIME ))s for $productivity::PREEXECCMD"
+
+	typeset cb
+	for cb in ${PRDVTY_POSTEXECCB[@]}; do
+		[ -n "$cb" ] || continue
+		$cb "$retcode"
+	done
+
+	# Reset the callback for pre-exec
+	PRDVTY_PREEXECCMD=""
+}
+
+# -----------------------------------------------------------------------------
+# Main processing
+# -----------------------------------------------------------------------------
+
+# Load main library data
+typeset f=""
+for f in "$MYPATH/lib/prdvty/"*.lib; do
+	[[ -s "$f" ]] && source "$f"
+done
+
+# Load custom library data
+for f in "$MYPATH/lib/local/"*.lib; do
+	[[ -s "$f" ]] && source "$f"
+done
+
+# Domains
+productivity_hostname="$(uname -n)"
+productivity_hostfqdn="$(getent ahosts $productivity_hostname| { read a t n; echo "$n"; } )"
+productivity_hostdom="${productivity_hostfqdn#*.}"
+if [ "$productivity_hostdom" = "$productivity_hostfqdn" ]; then
+	productivity_hostdom=""
+fi
+
+
+
+
+
+
+# At the end, replace the PROMPT_COMMAND by our 
+PROMPT_COMMAND='productivity::promptfunc $?'
+trap 'productivity::preexec' DEBUG
+
+# vim: ft=sh

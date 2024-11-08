@@ -1,0 +1,41 @@
+
+# List of segments, in order. will call "__powerline_segment_${segment}"
+POWERLINE_SEGMENTS="hostname cmdtime pwd status"
+
+# If "auto" && $TERM match *256color|*-termite|*-direct|*-kitty; then use "powerline". Else "compat"
+# Valid: auto, powerline, compat, icons-in-terminal, nerd-fonts
+POWERLINE_ICONS="auto"
+
+
+# powerline_segment output is simple: 
+# ${icon_foreground}:${icon}:${background_color}:${foreground_color}:
+function __powerline_segment_cmdtime {
+	# Using myshell pre-exec time
+	if [[ -n "${PRDVTY_PREEXECTIME:-}" ]]; then
+		typeset -i time_sec="$((${SECONDS:-$(date +%s)} - $PRDVTY_PREEXECTIME))"
+		typeset time_str=""
+		if [[ $time_sec -gt 86400 ]]; then
+			time_str+="$(( $time_sec / 86400 ))d "
+			time_sec="$(( $time_sec % 86400 ))"
+		fi
+		if [[ $time_sec -gt 3600 ]]; then
+			time_str+="$(( $time_sec / 3600))h "
+			time_sec="$(( $time_sec % 3600 ))"
+		fi
+		if [[ $time_sec -gt 60 ]]; then
+			time_str+="$(( $time_sec / 60))m "
+			time_sec="$(( $time_sec % 60 ))"
+		fi
+		time_str+="${time_sec}s"
+
+		__powerline_retval=("p:48;5;25:38;5;220:${POWERLINE_CLOCKRUN_ICON-}:${time_str}")
+		return
+	fi
+}
+
+function __powerline_segment_env {
+	:
+}
+
+# Register the powerline update func, as 
+productivity::promptfunc_register "__update_ps1"

@@ -1,0 +1,18 @@
+
+
+function kubernetes::kubeconfigFind {
+	:
+}
+
+function kubernetes::kubectl {
+	:
+	kubectl 
+
+}
+
+
+alias k=kubernetes::kubectl
+
+#productivity::
+
+# vim: ft=sh
