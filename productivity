@@ -2,6 +2,8 @@
 
 # Productivity: Production, Products, and Productivity.
 
+typeset __PRDVTY_PATH="$(realpath "$BASH_SOURCE")"
+typeset __PRDVTY_ROOT="${__PRDVTY_PATH%/*}"
 
 
 # -----------------------------------------------------------------------------
@@ -36,26 +38,28 @@ fi
 # Helper subs
 # -----------------------------------------------------------------------------
 
-
+function logInfo {
+	echo >&2 "[$(date "+%H:%M:%S")] $@"
+}
 
 # -----------------------------------------------------------------------------
 # Environement
 # -----------------------------------------------------------------------------
 
-function productivity::path_binadd {
-	productivity::path_add "PATH" $@
+function envPathBinadd {
+	envPathAdd "PATH" $@
 }
 
-function productivity::path_manadd {
-	productivity::path_add "MANPATH" $@
+function envPathManadd {
+	envPathAdd "MANPATH" $@
 }
 
-function productivity::path_libadd {
-	productivity::path_add "LD_LIBRARY_PATH" $@
+function envPathLibadd {
+	envPathAdd "LD_LIBRARY_PATH" $@
 }
 
 
-function productivity::path_add {
+function envPathAdd {
 	typeset var="$1"; shift
 	typeset where="$1"
 	if [ "$where" = "before" ] || [ "$where" = "after" ]; then
@@ -93,16 +97,16 @@ function productivity::path_add {
 
 typeset -i PRDVTY_LOADTIME="$(date +%s)"
 typeset -a PRDVTY_PROMPTFUNCCB=()
-function productivity::promptfunc {
+function prdvty::promptfunc {
 	typeset retcode=${1:-$?}
 
 	# Call our post-exec hooks
-	productivity::postexec "$retcode"
+	prdvty::postexec "$retcode"
 
 	# Reload configuration if witness flag is present
 	if [ -s "$MYSHELL_DIR/.reload" ]; then
 		typeset time="$(cat $MYSHELL_DIR/.reload | tr -cd '[0-9]')"
-		[ "${time:-0}" -gt "$PRDVTY_LOADTIME" ] && productivity::reload
+		[ "${time:-0}" -gt "$PRDVTY_LOADTIME" ] && prdvty::reload
 		PRDVTY_LOADTIME="$(date +%s)"
 	fi
 
@@ -114,7 +118,7 @@ function productivity::promptfunc {
 
 }
 
-function productivity::promptfunc_register {
+function prdvty::promptfuncRegister {
 	PRDVTY_PROMPTFUNCCB+=("$*")
 }
 
@@ -122,9 +126,9 @@ function productivity::promptfunc_register {
 typeset -a PRDVTY_PREEXECCB=() PRDVTY_POSTEXECCB=()
 typeset -i PRDVTY_PREEXECTIME=0
 typeset    PRDVTY_PREEXECCMD=
-function productivity::preexec {
+function prdvty::preexec {
 	# Skip our own PROMPT_COMMAND to reset our stats
-	[ "${BASH_COMMAND%% *}" == "productivity::promptfunc" ] && return
+	[ "${BASH_COMMAND%% *}" == "prdvty::promptfunc" ] && return
 
 	typeset cb
 	for cb in ${PRDVTY_PREEXECCB[@]}; do
@@ -133,12 +137,12 @@ function productivity::preexec {
 	done
 	PRDVTY_PREEXECTIME="${SECONDS:-$(date +%s)}"
 	PRDVTY_PREEXECCMD+="${PRDVTY_PREEXECCMD:+ | }$BASH_COMMAND"
-	#echo "Preeec: $PRDVTY_PREEXECCMD at $productivity::PREEXECTIME"
+	#echo "Preeec: $PRDVTY_PREEXECCMD at $prdvty::PREEXECTIME"
 }
-function productivity::postexec {
+function prdvty::postexec {
 	typeset retcode="$1"
 
-	#echo "Postexec: took $((${SECONDS:-$(date +%s)} - $PRDVTY_PREEXECTIME ))s for $productivity::PREEXECCMD"
+	#echo "Postexec: took $((${SECONDS:-$(date +%s)} - $PRDVTY_PREEXECTIME ))s for $prdvty::PREEXECCMD"
 
 	typeset cb
 	for cb in ${PRDVTY_POSTEXECCB[@]}; do
@@ -156,22 +160,14 @@ function productivity::postexec {
 
 # Load main library data
 typeset f=""
-for f in "$MYPATH/lib/prdvty/"*.lib; do
+for f in "$__PRDVTY_ROOT/lib/prdvty/"*.lib; do
 	[[ -s "$f" ]] && source "$f"
 done
 
 # Load custom library data
-for f in "$MYPATH/lib/local/"*.lib; do
+for f in "$__PRDVTY_ROOT/lib/local/"*.lib; do
 	[[ -s "$f" ]] && source "$f"
 done
-
-# Domains
-productivity_hostname="$(uname -n)"
-productivity_hostfqdn="$(getent ahosts $productivity_hostname| { read a t n; echo "$n"; } )"
-productivity_hostdom="${productivity_hostfqdn#*.}"
-if [ "$productivity_hostdom" = "$productivity_hostfqdn" ]; then
-	productivity_hostdom=""
-fi
 
 
 
@@ -179,7 +175,7 @@ fi
 
 
 # At the end, replace the PROMPT_COMMAND by our 
-PROMPT_COMMAND='productivity::promptfunc $?'
-trap 'productivity::preexec' DEBUG
+PROMPT_COMMAND='prdvty::promptfunc $?'
+trap 'prdvty::preexec' DEBUG
 
 # vim: ft=sh

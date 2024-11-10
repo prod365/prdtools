@@ -1,12 +1,59 @@
 
-
 function kubernetes::kubeconfigFind {
-	:
+	typeset path="$1"
+
+	typeset filename=
+	# Loop every configured filename, or by default "kubeconfig"
+	for filename in ${PRDVTY_KUBERNETES_CONFIG_NAMES:-kubeconfig}; do
+		# Look for every path
+		while [[ -n "$path" ]]; do
+			if [[ -s "$path/$filename" ]]; then
+				echo "$path/$filename"
+				return
+			fi
+			path="${path%/*}"
+		done
+	done
+
+}
+
+typeset -gA __PRDVTY_KUBERNETES_CONFIG_PREV=()
+#typeset -gi __PRDVTY_KUBERNETES_CONFIG_EDITTIME=0
+function kubernetes::envSet {
+	typeset path="${1:-$PWD}"
+
+	# Check if kubeconfig was set before, and 
+	if [[ -n "$KUBECONFIG" ]]; then
+		typeset kubeconfigPrev="${__PRDVTY_KUBERNETES_CONFIG_PREV[kubeconfig]}"
+		# Check if the variable was not touched outside of us
+		if [[ "$KUBECONFIG" != "$kubeconfigPrev" ]]; then
+			logInfo "Variable '$KUBECONFIG' has been changed outside of $BASH_SOURCE::$FUNCNAME. Disabling autodiscovery"
+			logInfo "To reenable autodiscovery, type 'kubernetes::envInit'"
+			return
+		fi
+
+		# No previous configuration
+	fi
+
+	# Do we have a kubeconfig file in our parents
+	typeset config="$(kubernetes::kubeconfigFind "$path")"
+	export KUBECONFIG="$config"
+
+	# Check for edit-time as cache
+#	if [[ -s "$config" ]] && [[ 
+
+	__PRDVTY_KUBERNETES_CONFIG_PREV[kubeconfig]="$KUBECONFIG"
+}
+
+function kubernetes::envInit {
+	# Register our env func with prompt to check file at every path change
+	productivity::promptfunc_register "kubernetes::envSet"
 }
 
 function kubernetes::kubectl {
-	:
-	kubectl 
+
+	
+	PATH+="${PRDVTY_KUBERNETES_KUBECTL_PATHS:-$HOME/bin}" type -P kubectl "$@"
 
 }
 

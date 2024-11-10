@@ -28,7 +28,7 @@ function __powerline_segment_cmdtime {
 		fi
 		time_str+="${time_sec}s"
 
-		__powerline_retval=("p:48;5;25:38;5;220:${POWERLINE_CLOCKRUN_ICON-}:${time_str}")
+		__powerline_retval=("::pwd-fond:2;pwd-texte:${time_str}")
 		return
 	fi
 }
@@ -37,5 +37,8 @@ function __powerline_segment_env {
 	:
 }
 
-# Register the powerline update func, as 
-productivity::promptfunc_register "__update_ps1"
+# Register the powerline update func. __update_ps1 will be overwritten if loading suceed
+function __update_ps1 { :; }
+prdvty::promptfuncRegister "__update_ps1"
+
+# vim: ft=sh
