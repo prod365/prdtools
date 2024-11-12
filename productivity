@@ -159,18 +159,20 @@ function prdvty::postexec {
 # -----------------------------------------------------------------------------
 
 # Load main library data
-typeset f=""
-for f in "$__PRDVTY_ROOT/lib/prdvty/"*.lib; do
-	[[ -s "$f" ]] && source "$f"
+typeset f="" libdir=""
+for libdir in "local/lib.pre" "prdvty" "local/lib.post"; do
+	for f in "$__PRDVTY_ROOT/lib/${libdir}/"*.lib; do
+		[[ -s "$f" ]] && source "$f"
+	done
 done
 
-# Load custom library data
-for f in "$__PRDVTY_ROOT/lib/local/"*.lib; do
-	[[ -s "$f" ]] && source "$f"
+typeset moddir="" modfile=""
+for moddir in $__PRDVTY_ROOT/modules/*; do
+	
+	for modfile in "$moddir/lib/"*; do
+		[[ -s "$modfile" ]] && source "$modfile"
+	done
 done
-
-
-
 
 
 
