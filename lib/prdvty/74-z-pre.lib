@@ -1,0 +1,21 @@
+
+# We're handling PROMPT_COMMAND ourselves, just register it
+typeset    _Z_NO_PROMPT_COMMAND=true
+function _z_promptfunc {
+	_z --add "$(command pwd -P 2>/dev/null)" 2>/dev/null
+}
+prdvty::promptfuncRegister "_z_promptfunc"
+
+
+# Scan all mounted path, and skip non-standard dirs
+typeset -a _Z_EXCLUDE_DIRS=()
+
+typeset dev= mnt= typ= _=;
+while read dev mnt typ _; do
+	# If the device doesnt start with /, or if the device is not a blockdev
+	if [[ "${dev:0:1}" != "/" ]] || ! [[ -b "$dev" ]]; then
+		_Z_EXCLUDE_DIRS+=("$mnt")
+	fi
+done < /proc/mounts
+
+# vim: ft=sh
