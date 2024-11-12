@@ -46,15 +46,15 @@ function logInfo {
 # Environement
 # -----------------------------------------------------------------------------
 
-function envPathBinadd {
+function envPathBinAdd {
 	envPathAdd "PATH" $@
 }
 
-function envPathManadd {
+function envPathManAdd {
 	envPathAdd "MANPATH" $@
 }
 
-function envPathLibadd {
+function envPathLibAdd {
 	envPathAdd "LD_LIBRARY_PATH" $@
 }
 
