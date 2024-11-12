@@ -17,6 +17,11 @@ function kubernetes::kubeconfigFind {
 
 }
 
+function kubernetes::kubectl {
+
+	PATH+=":${PRDVTY_KUBERNETES_BIN_PATHS:-$HOME/bin}" type -P kubectl "$@"
+}
+
 typeset -gA __PRDVTY_KUBERNETES_CONFIG_PREV=()
 #typeset -gi __PRDVTY_KUBERNETES_CONFIG_EDITTIME=0
 function kubernetes::envSet {
@@ -47,19 +52,13 @@ function kubernetes::envSet {
 
 function kubernetes::envInit {
 	# Register our env func with prompt to check file at every path change
-	productivity::promptfunc_register "kubernetes::envSet"
-}
+	prdvty::promptfuncRegister "kubernetes::envSet"
 
-function kubernetes::kubectl {
-
-	
-	PATH+="${PRDVTY_KUBERNETES_KUBECTL_PATHS:-$HOME/bin}" type -P kubectl "$@"
 
 }
 
 
 alias k=kubernetes::kubectl
 
-#productivity::
 
 # vim: ft=sh
