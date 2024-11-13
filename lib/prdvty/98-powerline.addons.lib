@@ -52,7 +52,7 @@ function prdvty::powerlineSegmentAdd {
 	segNew=""
 	for segCurr in $POWERLINE_SEGMENTS; do
 		# skip existing segments
-		[[ -e "${segExisting[$segCurr]}" ]] && continue
+		[[ -n "${segExisting[$segCurr]}" ]] && continue
 
 		segNew+="$segCurr "
 		segExisting[$segCurr]="$segCurr"
