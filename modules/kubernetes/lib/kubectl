@@ -55,12 +55,16 @@ function kubernetes::envInit {
 	# Search our kubectl command
 	typeset kubectlPath="$(kubernetes::kubectlFind)"
 	if [[ -x "$kubectlPath" ]]; then
+
+		# Add kubectl to our path
 		prdvty::envPathBinAdd "${kubectlPath%/*}"
+
+		# Add k8s segment to powerline
+		prdvty::powerlineSegmentAdd "k8s" "cmdtime"
 	fi
 
 	# Register our env func with prompt to check file at every path change
 	prdvty::postexecfuncRegister "kubernetes::envSet"
-
 
 }
 
