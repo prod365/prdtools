@@ -1,12 +1,12 @@
+# vim: ft=sh
 
 # List of segments, in order. will call "__powerline_segment_${segment}"
 # Add cmdtime before status
-POWERLINE_SEGMENTS="${POWERLINE_SEGMENTS/ status/ cmdtime status}"
+prdvty::powerlineSegmentAdd "cmdtime" "status"
 
 # If "auto" && $TERM match *256color|*-termite|*-direct|*-kitty; then use "powerline". Else "compat"
 # Valid: auto, powerline, compat, icons-in-terminal, nerd-fonts
 POWERLINE_ICONS="auto"
-
 
 # powerline_segment output is simple: 
 # ${icon_foreground}:${icon}:${background_color}:${foreground_color}:
@@ -39,4 +39,31 @@ if type -t "__update_ps1" >/dev/null 2>&1; then
 	prdvty::promptfuncRegister "__update_ps1"
 fi
 
-# vim: ft=sh
+
+function prdvty::powerlineSegmentAdd {
+	typeset newSegment="$1"
+	typeset addBefore="${2:-}"
+
+	typeset segCurr= segNew=
+	if [[ -n "$addBefore" ]]; then
+		for segCurr in ${POWERLINE_SEGMENTS}; do
+			[[ "$segCurr" == "$addBefore" ]] && segNew+=" $newSegment"
+			segNew+=" $segCurr"
+		done
+		POWERLINE_SEGMENTS="$segNew"
+	else
+		POWERLINE_SEGMENTS+=" $newSegment"
+	fi
+
+	# Remove duplicates
+	typeset -A segExisting=()
+	segNew=""
+	for segCurr in $POWERLINE_SEGMENTS; do
+		# skip existing segments
+		[[ -e "${segExisting[$segCurr]}" ]] && continue
+
+		segNew+="$segCurr "
+		segExisting[$segCurr]="$segCurr"
+	done
+	POWERLINE_SEGMENTS="$segNew"
+}
