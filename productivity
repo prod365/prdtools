@@ -46,20 +46,20 @@ function logInfo {
 # Environement
 # -----------------------------------------------------------------------------
 
-function envPathBinAdd {
-	envPathAdd "PATH" $@
+function prdvty::envPathBinAdd {
+	prdvty::envPathAdd "PATH" $@
 }
 
-function envPathManAdd {
-	envPathAdd "MANPATH" $@
+function prdvty::envPathManAdd {
+	prdvty::envPathAdd "MANPATH" $@
 }
 
-function envPathLibAdd {
-	envPathAdd "LD_LIBRARY_PATH" $@
+function prdvty::envPathLibAdd {
+	prdvty::envPathAdd "LD_LIBRARY_PATH" $@
 }
 
 
-function envPathAdd {
+function prdvty::envPathAdd {
 	typeset var="$1"; shift
 	typeset where="$1"
 	if [ "$where" = "before" ] || [ "$where" = "after" ]; then
@@ -96,19 +96,14 @@ function envPathAdd {
 #fi
 
 typeset -i PRDVTY_LOADTIME="$(date +%s)"
-typeset -a PRDVTY_PROMPTFUNCCB=()
+typeset -a PRDVTY_PROMPTFUNCCB=() PRDVTY_PREEXECCB=() PRDVTY_POSTEXECCB=()
+typeset -i PRDVTY_PREEXECTIME=0
+typeset    PRDVTY_PREEXECCMD=
 function prdvty::promptfunc {
 	typeset retcode=${1:-$?}
 
 	# Call our post-exec hooks
-	prdvty::postexec "$retcode"
-
-	# Reload configuration if witness flag is present
-	if [ -s "$MYSHELL_DIR/.reload" ]; then
-		typeset time="$(cat $MYSHELL_DIR/.reload | tr -cd '[0-9]')"
-		[ "${time:-0}" -gt "$PRDVTY_LOADTIME" ] && prdvty::reload
-		PRDVTY_LOADTIME="$(date +%s)"
-	fi
+	prdvty::shellPostExec "$retcode"
 
 	typeset cb
 	for cb in ${PRDVTY_PROMPTFUNCCB[@]}; do
@@ -122,14 +117,17 @@ function prdvty::promptfuncRegister {
 	PRDVTY_PROMPTFUNCCB+=("$*")
 }
 
+function prdvty::postexecfuncRegister {
+	PRDVTY_POSTEXECCB+=("$*")
+}
 
-typeset -a PRDVTY_PREEXECCB=() PRDVTY_POSTEXECCB=()
-typeset -i PRDVTY_PREEXECTIME=0
-typeset    PRDVTY_PREEXECCMD=
-function prdvty::preexec {
+
+# preexec is called by bash "trap DEBUG". called before executing a cmd
+function prdvty::shellPreExec {
 	# Skip our own PROMPT_COMMAND to reset our stats
 	[ "${BASH_COMMAND%% *}" == "prdvty::promptfunc" ] && return
 
+	# Call out pre-exec callbacks
 	typeset cb
 	for cb in ${PRDVTY_PREEXECCB[@]}; do
 		[ -n "$cb" ] || continue
@@ -139,11 +137,14 @@ function prdvty::preexec {
 	PRDVTY_PREEXECCMD+="${PRDVTY_PREEXECCMD:+ | }$BASH_COMMAND"
 	#echo "Preeec: $PRDVTY_PREEXECCMD at $prdvty::PREEXECTIME"
 }
-function prdvty::postexec {
+
+# PostExec is called by promptfunc, itself called by the shell PROMPT_COMMAND
+function prdvty::shellPostExec {
 	typeset retcode="$1"
 
 	#echo "Postexec: took $((${SECONDS:-$(date +%s)} - $PRDVTY_PREEXECTIME ))s for $prdvty::PREEXECCMD"
 
+	# Call our post-exec callbacks
 	typeset cb
 	for cb in ${PRDVTY_POSTEXECCB[@]}; do
 		[ -n "$cb" ] || continue
@@ -166,18 +167,18 @@ for libdir in "local/lib.pre" "prdvty" "local/lib.post"; do
 	done
 done
 
+# Load modules
 typeset moddir="" modfile=""
-for moddir in $__PRDVTY_ROOT/modules/*; do
-	
+for moddir in "$__PRDVTY_ROOT/modules/"*; do
+	[[ -d "$moddir" ]] || continue
+
 	for modfile in "$moddir/lib/"*; do
 		[[ -s "$modfile" ]] && source "$modfile"
 	done
 done
 
-
-
-# At the end, replace the PROMPT_COMMAND by our 
+# At the end, replace the PROMPT_COMMAND by ours
 PROMPT_COMMAND='prdvty::promptfunc $?'
-trap 'prdvty::preexec' DEBUG
+trap 'prdvty::shellPreExec' DEBUG
 
 # vim: ft=sh
