@@ -1,8 +1,22 @@
 # vim: ft=sh
-#
-# Try to guess the local env
 
+# =============================================================================
+# Bash history management
+#
+
+# Increase retention commands
+export HISTSIZE=999999
+# Add date + time of the command
+export HISTTIMEFORMAT="[ %F %T ] "
+# Ignore commands startin gwith space, and remove duplicated commands
+export HISTCONTROL=ignorespace,erasedups
+# Set the history file per host, useful when homedir is on nfs
+export HISTFILE="$HOME/.bash_history.d/$(uname -n)"
+[[ -d "${HISTFILE%/*}" ]] || mkdir -p "${HISTFILE%/*}"
+
+# =============================================================================
 # Try to guess our running env (chroot, jail, VM...)
+#
 typeset PRDVTY_RUNENV=""
 
 # Check if /proc is available
@@ -29,6 +43,8 @@ else
 fi
 
 
+# =============================================================================
+# Aliases
 
 alias l="ls -al"
 alias ..="cd .."
@@ -37,7 +53,10 @@ alias ....="cd ../../.."
 alias .....="cd ../../.."
 
 
+# =============================================================================
+# Helpers
 
+# "vim which": edit the binary (script) that match within $PATH
 function viw {
 	typeset b
 	for b in "$@"; do
