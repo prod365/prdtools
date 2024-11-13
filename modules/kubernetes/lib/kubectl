@@ -6,7 +6,7 @@ function kubernetes::kubeconfigFind {
 	# Loop every configured filename, or by default "kubeconfig"
 	for filename in ${PRDVTY_KUBERNETES_CONFIG_NAMES:-kubeconfig}; do
 		# Look for every path
-		while [[ -n "$path" ]]; do
+		while [[ -n "$path" ]] && [[ -e "$path" ]]; do
 			if [[ -s "$path/$filename" ]]; then
 				echo "$path/$filename"
 				return
@@ -24,7 +24,8 @@ function kubernetes::kubectlFind {
 typeset -gA __PRDVTY_KUBERNETES_CONFIG_PREV=()
 #typeset -gi __PRDVTY_KUBERNETES_CONFIG_EDITTIME=0
 function kubernetes::envSet {
-	typeset path="${1:-$PWD}"
+
+	typeset path="$PWD"
 
 	# Check if kubeconfig was set before, and 
 	if [[ -n "$KUBECONFIG" ]]; then
