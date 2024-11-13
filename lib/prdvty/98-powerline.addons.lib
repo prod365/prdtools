@@ -1,6 +1,7 @@
 
 # List of segments, in order. will call "__powerline_segment_${segment}"
-POWERLINE_SEGMENTS="hostname cmdtime pwd status"
+# Add cmdtime before status
+POWERLINE_SEGMENTS="${POWERLINE_SEGMENTS/ status/ cmdtime status}"
 
 # If "auto" && $TERM match *256color|*-termite|*-direct|*-kitty; then use "powerline". Else "compat"
 # Valid: auto, powerline, compat, icons-in-terminal, nerd-fonts
@@ -33,12 +34,9 @@ function __powerline_segment_cmdtime {
 	fi
 }
 
-function __powerline_segment_env {
-	:
-}
-
-# Register the powerline update func. __update_ps1 will be overwritten if loading suceed
-function __update_ps1 { :; }
-prdvty::promptfuncRegister "__update_ps1"
+# Register the powerline update func. __update_ps1
+if type -t "__update_ps1" >/dev/null 2>&1; then
+	prdvty::promptfuncRegister "__update_ps1"
+fi
 
 # vim: ft=sh
