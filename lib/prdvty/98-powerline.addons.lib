@@ -1,13 +1,5 @@
 # vim: ft=sh
 
-# List of segments, in order. will call "__powerline_segment_${segment}"
-# Add cmdtime before status
-prdvty::powerlineSegmentAdd "cmdtime" "status"
-
-# If "auto" && $TERM match *256color|*-termite|*-direct|*-kitty; then use "powerline". Else "compat"
-# Valid: auto, powerline, compat, icons-in-terminal, nerd-fonts
-POWERLINE_ICONS="auto"
-
 # powerline_segment output is simple: 
 # ${icon_foreground}:${icon}:${background_color}:${foreground_color}:
 function __powerline_segment_cmdtime {
@@ -67,3 +59,14 @@ function prdvty::powerlineSegmentAdd {
 	done
 	POWERLINE_SEGMENTS="$segNew"
 }
+
+
+# List of segments, in order. will call "__powerline_segment_${segment}"
+# Add cmdtime before status
+prdvty::powerlineSegmentAdd "cmdtime" "status"
+
+# If "auto" && $TERM match *256color|*-termite|*-direct|*-kitty; then use "powerline". Else "compat"
+# Valid: auto, powerline, compat, icons-in-terminal, nerd-fonts
+POWERLINE_ICONS="auto"
+
+
