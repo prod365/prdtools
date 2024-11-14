@@ -1,3 +1,4 @@
+# vim: ft=sh
 
 function kubernetes::kubeconfigFind {
 	typeset path="$1"
@@ -22,7 +23,6 @@ function kubernetes::kubectlFind {
 }
 
 typeset -gA __PRDVTY_KUBERNETES_CONFIG_PREV=()
-#typeset -gi __PRDVTY_KUBERNETES_CONFIG_EDITTIME=0
 function kubernetes::envSet {
 
 	typeset path="$PWD"
@@ -33,22 +33,59 @@ function kubernetes::envSet {
 		# Check if the variable was not touched outside of us
 		if [[ "$KUBECONFIG" != "$kubeconfigPrev" ]]; then
 			logInfo "Variable '$KUBECONFIG' has been changed outside of $BASH_SOURCE::$FUNCNAME. Disabling autodiscovery"
-			logInfo "To reenable autodiscovery, type 'kubernetes::envInit'"
+			logInfo "To reenable autodiscovery, type 'unset KUBECONFIG'"
 			return
 		fi
 
 		# No previous configuration
 	fi
 
-	# Do we have a kubeconfig file in our parents
+	# Do we have a kubeconfig file in our parent folders
 	typeset config="$(kubernetes::kubeconfigFind "$path")"
 	export KUBECONFIG="$config"
-
-	# Check for edit-time as cache
-#	if [[ -s "$config" ]] && [[ 
-
 	__PRDVTY_KUBERNETES_CONFIG_PREV[kubeconfig]="$KUBECONFIG"
+
+	# Set the cachedir to local tmp, in case of home in NFS
+	typeset cache="/tmp/kubectl.cache.${USER:-$(whoami)}"
+	mkdir -p "$cache"
+	export KUBECACHEDIR="$cache"
+	__PRDVTY_KUBERNETES_CONFIG_PREV[kubecachedir]="$KUBECACHEDIR"
+
 }
+
+function kubernetes::clusterStatus {
+	:
+}
+
+function kubernetes::clusterNodes {
+	k get nodes -A --output json "$@" | jq '.items[].metadata | .name, .labels'  -c | paste - - | column -t
+}
+
+function kubernetes::clusterPods {
+	k get pods -A --output json "$@" | jq '.items[].metadata | .namespace, .name, .labels' -c | paste - - - | column -t
+}
+
+function kubernetes::clusterDebug {
+	typeset dstDir="${1:-$PWD/kubernetes.debug.$(date +%Y-%m-%d_%H-%M-%S)}"
+
+	echo "Will dump debug data in '$dstDir'."
+	echo "Press any key to execute, or Ctrl+C to cancel..."
+	read
+	mkdir -p "$dstDir"
+
+	typeset typ= kubectl="$(kubernetes::kubectlFind)"
+	for typ in namespaces nodes pods persistentvolumes persistentvolumeclaims componentstatuses configmaps endpoints services deployments replicasets statefulsets applications appprojects cronjobs ingresses volumeattachments; do
+
+		echo "Describing $typ..."
+		kubectl describe $typ -A > "$dstDir/describe.$typ.txt"
+	done
+
+	echo "Dumping cluster-info..."
+	kubectl cluster-info dump --output-directory="$dstDir/clusterinfo"
+
+	echo "Done."
+}
+
 
 function kubernetes::envInit {
 
@@ -59,8 +96,22 @@ function kubernetes::envInit {
 		# Add kubectl to our path
 		prdvty::envPathBinAdd "${kubectlPath%/*}"
 
+		# Add completion
+		source <($kubectlPath completion bash)
+
+		# Add an alias, and bind its completion too
+		alias k="kubectl"
+		complete -F __start_kubectl k
+
 		# Add k8s segment to powerline
 		prdvty::powerlineSegmentAdd "k8s" "cmdtime"
+
+
+		# Add our helpers. Commands like "klist" or "kdestroy" are kerberos...
+		alias kubedebug="kubernetes::clusterDebug"
+		alias kubestatus="kubernetes::clusterStatus"
+		alias kubenodes="kubernetes::clusterNodes"
+		alias kubepods="kubernetes::clusterPods"
 	fi
 
 	# Register our env func with prompt to check file at every path change
@@ -69,7 +120,7 @@ function kubernetes::envInit {
 }
 
 
+
 # Init env
 kubernetes::envInit
 
-# vim: ft=sh
