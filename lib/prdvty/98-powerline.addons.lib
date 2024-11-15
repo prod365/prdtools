@@ -60,6 +60,20 @@ function prdvty::powerlineSegmentAdd {
 	POWERLINE_SEGMENTS="$segNew"
 }
 
+function prdvty::powerlineSegmentDel {
+
+	typeset seg= segTodel= segNew=
+	for seg in $POWERLINE_SEGMENTS; do
+		for segTodel in "$@"; do
+			# Skip segments to remove
+			[[ "$seg" == "$segTodel" ]] && continue 2
+		done
+
+		segNew+="$seg "
+	done
+
+	POWERLINE_SEGMENTS="$segNew"
+}
 
 # List of segments, in order. will call "__powerline_segment_${segment}"
 # Add cmdtime before status
