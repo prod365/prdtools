@@ -14,6 +14,20 @@ export HISTCONTROL=ignorespace,erasedups
 export HISTFILE="$HOME/.bash_history.d/$(uname -n)"
 [[ -d "${HISTFILE%/*}" ]] || mkdir -p "${HISTFILE%/*}"
 
+
+# =============================================================================
+# Readline configuration
+#
+
+# Don't require to press tab 2 times to get completion listing
+bind "set show-all-if-ambiguous on"
+# Ignore case when doing completion
+bind "set completion-ignore-case on"
+# Colorize the completed prefix
+bind "set colored-completion-prefix on"
+
+
+
 # =============================================================================
 # Try to guess our running env (chroot, jail, VM...)
 #
