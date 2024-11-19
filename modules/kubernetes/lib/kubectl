@@ -22,6 +22,19 @@ function kubernetes::kubectlFind {
 	PATH+=":${PRDVTY_KUBERNETES_BIN_PATHS:-$HOME/bin}" type -p kubectl
 }
 
+function kubernetes::kubectl {
+
+	typeset k="$(kubernetes::kubectlFind)"
+
+	if ! [[ -n "$k" ]]; then
+		echo >&2 "Unable to find kubectl (called for '$@')"
+		return 1
+	fi
+
+	"$k" "$@"
+}
+
+
 typeset -gA __PRDVTY_KUBERNETES_CONFIG_PREV=()
 function kubernetes::envSet {
 
@@ -53,16 +66,27 @@ function kubernetes::envSet {
 
 }
 
+function kubernetes::clusterInfo {
+	
+	typeset -a nodes=(kubernetes::kubectl get nodes)
+	typeset -a namespaces=(kubernetes::kubectl get namespaces)
+	
+	typeset ns pod detail
+	while read ns pod detail; do
+		:
+	done < <(kubernetes::kubectl get pods -A --output json)
+}
+
 function kubernetes::clusterStatus {
 	:
 }
 
 function kubernetes::clusterNodes {
-	k get nodes -A --output json "$@" | jq '.items[].metadata | .name, .labels'  -c | paste - - | column -t
+	kubernetes::kubectl get nodes --output json "$@" | jq '.items[].metadata | .name, .labels'  -c | paste - - | column -t
 }
 
 function kubernetes::clusterPods {
-	k get pods -A --output json "$@" | jq '.items[].metadata | .namespace, .name, .labels' -c | paste - - - | column -t
+	kubernetes::kubectl get pods -A --output json "$@" | jq '.items[].metadata | .namespace, .name, .labels' -c | paste - - - | column -t
 }
 
 function kubernetes::clusterDebug {
@@ -81,7 +105,7 @@ function kubernetes::clusterDebug {
 	done
 
 	echo "Dumping cluster-info..."
-	kubectl cluster-info dump --output-directory="$dstDir/clusterinfo"
+	kubernetes::kubectl cluster-info dump --output-directory="$dstDir/clusterinfo"
 
 	echo "Done."
 }
@@ -112,11 +136,10 @@ function kubernetes::envInit {
 		alias kubestatus="kubernetes::clusterStatus"
 		alias kubenodes="kubernetes::clusterNodes"
 		alias kubepods="kubernetes::clusterPods"
+
+		# Register our env func with prompt to check file at every path change
+		prdvty::postexecfuncRegister "kubernetes::envSet"
 	fi
-
-	# Register our env func with prompt to check file at every path change
-	prdvty::postexecfuncRegister "kubernetes::envSet"
-
 }
 
 
