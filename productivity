@@ -28,8 +28,8 @@ fi
 # If no debug override has been done yet
 if [[ -z "${PS4:-}" ]] || [[ "$PS4" == "+ " ]]; then
 	PS4=' (${BASH_SOURCE##*/}:$LINENO ${FUNCNAME[0]:-main})  '
-	# Add a dark shadow to debug prompt
-	PS4="\033[2m$PS4\033[0m"
+	# Add a dark shadow to debug prefix, but keep space as first char
+	PS4=" \033[2m${PS4# }\033[0m"
 fi
 
 
