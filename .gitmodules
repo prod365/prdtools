@@ -1,0 +1,3 @@
+[submodule "modules/parallel/parallel"]
+	path = modules/parallel/parallel
+	url = https://github.com/saruspete/p5-parallel
