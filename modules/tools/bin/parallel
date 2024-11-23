@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+typeset MYSELF="$(realpath $0)"
+typeset MYPATH="${MYSELF%/*}"
+
+set -o nounset -o noclobber
+export LC_ALL=C
+export PATH="/bin:/sbin:/usr/bin:/usr/sbin:$PATH"
+export PS4=' (${BASH_SOURCE##*/}:$LINENO ${FUNCNAME[0]:-main})  '
+
+
+typeset PARA_ROOT="$MYPATH/../libexec/parallel"
+typeset PARA_BIN="$PARA_ROOT/parallel.pl"
+
+exec "$PARA_BIN" "$@"
