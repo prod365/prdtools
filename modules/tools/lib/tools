@@ -1,0 +1,13 @@
+# vim: ft=sh
+
+
+function tools::init {
+
+	typeset mypath="$(realpath $BASH_SOURCE)"
+	typeset binpath="$(realpath "${mypath%/*}/../bin")"
+
+	prdvty::envPathBinAdd "$binpath"
+
+}
+
+tools::init
