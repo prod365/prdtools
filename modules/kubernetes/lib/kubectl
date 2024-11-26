@@ -95,8 +95,10 @@ function kubernetes::envInit {
 		alias kubedebug="kubernetes::clusterDebug"
 		alias kubeinfo="kubernetes::clusterInto"
 		alias kubestatus="kubernetes::clusterStatus"
-		alias kubenodes="kubernetes::clusterNodes"
-		alias kubepods="kubernetes::clusterPods"
+		alias kubenodes="kubernetes::clusterNodesList"
+		alias kubenodesstatus="kubernetes::clusterNodesStatus"
+		alias kubecontainers="kubernetes::clusterContainersList"
+		alias kubepods="kubernetes::clusterPodsList"
 
 		# Register our env func with prompt to check file at every path change
 		prdvty::postexecfuncRegister "kubernetes::envSet"
@@ -122,12 +124,20 @@ function kubernetes::clusterStatus {
 	:
 }
 
-function kubernetes::clusterNodes {
+function kubernetes::clusterNodesStatus {
+	kubernetes::kubectl get nodes --output jsonpath='{range .items[*]}{"# Node:"}{.metadata.name}{" / Ready:"}{.status.conditions[?(@.type=="Ready")].status}{"\n"}{range .status.conditions[*]}{.message}{"\n"}{end}{"\n"}{end}'
+}
+
+function kubernetes::clusterNodesList {
 	kubernetes::kubectl get nodes --output json "$@" | jq '.items[].metadata | .name, .labels'  -c | paste - - | column -t
 }
 
-function kubernetes::clusterPods {
+function kubernetes::clusterPodsList {
 	kubernetes::kubectl get pods -A --output json "$@" | jq '.items[].metadata | .namespace, .name, .labels' -c | paste - - - | column -t
+}
+
+function kubernetes::clusterContainersList {
+	kubernetes::kubectl get pods -A --output jsonpath='{range .items[*]}{.metadata.namespace} {.spec.nodeName} {.metadata.name} {.status.phase} {range .spec.containers[*]}{.name}{" "}{end}{"\n"}{end}' "$@" | column -t
 }
 
 function kubernetes::clusterDebug {
@@ -141,14 +151,15 @@ function kubernetes::clusterDebug {
 	typeset typ= kubectl="$(kubernetes::kubectlFind)"
 	for typ in namespaces nodes pods persistentvolumes persistentvolumeclaims componentstatuses configmaps endpoints services deployments replicasets statefulsets applications appprojects cronjobs ingresses volumeattachments; do
 
-		echo "Describing $typ..."
-		kubectl describe $typ -A > "$dstDir/describe.$typ.txt"
+		echo "Dumping $typ..."
+		kubernetes::kubectl describe $typ -A               > "$dstDir/describe.$typ.txt"
+		kubernetes::kubectl get      $typ -A --output json > "$dstDir/get.$typ.json"
 	done
 
 	echo "Dumping cluster-info..."
 	kubernetes::kubectl cluster-info dump --output-directory="$dstDir/clusterinfo"
 
-	echo "Done."
+	echo "Done dumping data in '$dstDir'"
 }
 
 
