@@ -17,15 +17,19 @@ fi
 typeset -a _Z_SKIPTEST_DIRS=()
 typeset -a _Z_EXCLUDE_DIRS=()
 
-typeset dev= mnt= typ= _=;
+typeset dev= mnt= mnt2= typ= _=;
 while read dev mnt typ _; do
 	# If the device doesnt start with /, or if the device is not a blockdev
 	if [[ "${dev:0:1}" != "/" ]] || ! [[ -b "$dev" ]]; then
-		# If it's a slow network dir (nfs), just skip test on it
-		if [[ "${typ:0:3}" == "nfs" ]]; then
+		# If it's a slow network dir (nfs, cifs), just skip test on it
+		if [[ "$typ" =~ ^(nfs|autofs|smb|cifs) ]]; then
 			_Z_SKIPTEST_DIRS+=("$mnt")
 		# Else, any other special dir (tmp, proc, sys...)
 		else
+			# Skip sub-folders of existing exclude list to avoid huge list
+			for mnt2 in "${_Z_EXCLUDE_DIRS[@]}"; do
+				[[ "${mnt#$mnt2}" != "$mnt" ]] && continue 2
+			done
 			_Z_EXCLUDE_DIRS+=("$mnt")
 		fi
 	fi
