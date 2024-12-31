@@ -122,7 +122,11 @@ function kubernetes::clusterStatus {
 			typeset str="$nsLast: "
 			typeset ks=
 			for ks in "${!podCnt[@]}"; do
-				str+=" $ks(${podCnt[$ks]})"
+				if [[ "$ks" == "Running" ]]; then
+					str+=" $ks(${podCnt[$ks]})"
+				else
+					str+=" $ks(${podList[$ks]})"
+				fi
 			done
 
 			echo "$str"
@@ -131,7 +135,7 @@ function kubernetes::clusterStatus {
 
 		nsLast="$ns"
 		podCnt[$status]=$(( ${podCnt[$status]:-0} +1))
-		podList[$status]="$pod($old) "
+		podList[$status]="$pod[$old] "
 	done < <(kubernetes::kubectl get pods -A; echo _)
 }
 
