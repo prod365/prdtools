@@ -6,11 +6,16 @@ function _z_promptfunc {
 }
 prdvty::promptfuncRegister "_z_promptfunc"
 
+function _isNetworkFs {
+	[[ "$1" =~ ^(nfs|autofs|smb|cifs) ]]
+}
+
+
 # Create a per-host folder if home is NFS
 typeset HOMETYPE="$(df -PT $HOME|awk 'END{print $2}')"
-if [[ "${HOMETYPE:0:3}" == "nfs" ]]; then
-	typeset _Z_DATA="$HOME/.z.d/$(uname -n)"
-	mkdir -p "${_Z_DATA#/*}"
+if _isNetworkFs "$HOMETYPE"; then
+	export _Z_DATA="$HOME/.z.d/$(uname -n)"
+	mkdir -p "${_Z_DATA%/*}"
 fi
 
 # Scan all mounted path: exclude non-standard dirs, Skip NFS from being tested
@@ -22,7 +27,7 @@ while read dev mnt typ _; do
 	# If the device doesnt start with /, or if the device is not a blockdev
 	if [[ "${dev:0:1}" != "/" ]] || ! [[ -b "$dev" ]]; then
 		# If it's a slow network dir (nfs, cifs), just skip test on it
-		if [[ "$typ" =~ ^(nfs|autofs|smb|cifs) ]]; then
+		if _isNetworkFs "$typ"; then
 			_Z_SKIPTEST_DIRS+=("$mnt")
 		# Else, any other special dir (tmp, proc, sys...)
 		else
