@@ -109,18 +109,32 @@ function kubernetes::envInit {
 # =============================================================================
 # Cluster helpers
 
-function kubernetes::clusterInfo {
+function kubernetes::clusterStatus {
 	
 	typeset -a nodes=(kubernetes::kubectl get nodes)
-	typeset -a namespaces=(kubernetes::kubectl get namespaces)
-	
-	typeset ns pod detail
-	while read ns pod detail; do
-		:
-	done < <(kubernetes::kubectl get pods -A --output json)
+
+	typeset -A podCnt=() podList=()
+	typeset ns pod ready status restart old _;
+	while read ns pod ready status restart old _ nsLast; do
+		[[ "$ns" == "NAMESPACE" ]] && continue
+		if [[ -n "$nsLast" ]] && [[ "$ns" != "$nsLast" ]]; then
+			typeset str="$nsLast:"
+			typeset ks=
+			for ks in "${!podCnt[@]}"; do
+				str+=" $ks(${podCnt[$ks]})"
+			done
+
+			echo "$str"
+			nsLast="$ns"
+			podCnt=() podList=()
+		fi
+
+		podCnt[$status]=$(( ${podCnt[$status]:-0} +1))
+		podList[$status]="$pod($old) "
+	done < <(kubernetes::kubectl get pods -A; echo _)
 }
 
-function kubernetes::clusterStatus {
+function kubernetes::clusterInfo {
 	:
 }
 
