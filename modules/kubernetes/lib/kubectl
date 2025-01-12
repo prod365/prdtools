@@ -101,7 +101,7 @@ function kubernetes::envInit {
 		alias kubepods="kubernetes::clusterPodsList"
 
 		# Register our env func with prompt to check file at every path change
-		prdvty::postexecfuncRegister "kubernetes::envSet"
+		prdvty::shellPostExecRegister "kubernetes::envSet"
 	fi
 }
 
@@ -182,6 +182,16 @@ function kubernetes::clusterDebug {
 }
 
 
+function kubernetes::podEnterAsRoot {
+	typeset ns="$1"
+	typeset pod="$2"
+
+	typeset podjson="$(kubernetes::kubectl -n $ns get pods "$pod" -o json)"
+	typeset node="$(echo "$podjson" | jq -r '.spec.nodeName')"
+	typeset cid="$(echo "$podjson"  | jq -r '.status.containerStatuses[].containerID')"
+	typeset pid="$(kubernetes::kubectl node-shell "$node" -- bash -ic "crictl inspect ${cid#*://}" | jq ".info.pid")"
+	kubernetes::kubectl node-shell "$node" -- bash -c "nsenter -t $pid -m -u -i -n -p -- /bin/bash"
+}
 
 
 # Init env
