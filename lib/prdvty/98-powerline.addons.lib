@@ -28,7 +28,7 @@ function __powerline_segment_cmdtime {
 
 # Register the powerline update func. __update_ps1
 if type -t "__update_ps1" >/dev/null 2>&1; then
-	prdvty::promptfuncRegister "__update_ps1"
+	prdvty::shellPostExecRegister "__update_ps1"
 fi
 
 

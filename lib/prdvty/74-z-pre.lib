@@ -4,7 +4,7 @@ typeset    _Z_NO_PROMPT_COMMAND=true
 function _z_promptfunc {
 	_z --add "$(command pwd -P 2>/dev/null)" 2>/dev/null
 }
-prdvty::promptfuncRegister "_z_promptfunc"
+prdvty::shellPostExecRegister "_z_promptfunc"
 
 function _isNetworkFs {
 	[[ "$1" =~ ^(nfs|autofs|smb|cifs) ]]
