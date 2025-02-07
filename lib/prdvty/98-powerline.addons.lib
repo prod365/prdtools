@@ -4,6 +4,7 @@
 # ${icon_foreground}:${icon}:${background_color}:${foreground_color}:
 function __powerline_segment_cmdtime {
 	# Using myshell pre-exec time
+	__powerline_retval=()
 	if [[ -n "${PRDVTY_PREEXECTIME:-}" ]]; then
 		typeset -i time_sec="$((${SECONDS:-$(date +%s)} - $PRDVTY_PREEXECTIME))"
 		typeset time_str=""
