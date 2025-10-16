@@ -100,7 +100,21 @@ typeset -a PRDVTY_PREEXECCB=() PRDVTY_POSTEXECCB=()
 
 
 function prdvty::shellPostExecRegister {
-	PRDVTY_POSTEXECCB+=("$*")
+	typeset where="$1"
+	case "$where" in
+		before)
+			shift
+			PRDVTY_POSTEXECCB=("$*" "${PRDVTY_POSTEXECCB[@]}")
+			;;
+		after)
+			shift
+			PRDVTY_POSTEXECCB+=("$*")
+			;;
+		*)
+			PRDVTY_POSTEXECCB+=("$*")
+			;;
+	esac
+
 }
 
 function prdvty::shellPreExecRegister {
