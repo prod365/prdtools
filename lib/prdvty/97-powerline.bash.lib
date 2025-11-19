@@ -1326,6 +1326,7 @@ __powerline_parse_git_status_v2() {
 	local ab
 	local detached=
 
+	local line=
 	while read -r line ; do
 		# If line starts with '# ', it's branch info
 		if [ -z "${line### branch.*}" ] ; then
@@ -1361,6 +1362,7 @@ __powerline_parse_git_status_v1() {
 	local branch
 	local detached=
 	local dirty=
+	local line=
 
 	__powerline_split $'\n' "$status"
 	local lines=("${__powerline_retval[@]}")
@@ -1747,6 +1749,7 @@ __powerline_segment_pwd() {
 	local parts=("${__powerline_retval[@]}")
 
 	__powerline_retval=()
+	local i=""
 	for i in "${!parts[@]}" ; do
 		part="${parts[$i]}"
 		if [ "$((i+1))" -eq "${#parts[@]}" ] ; then
@@ -1970,6 +1973,7 @@ __powerline_shorten_dir_initiale() {
 	# Leave the last 2 part parts alone.
 	local last_index="$(( number_of_parts - 3 ))"
 
+	local i=""
 	for i in "${!dir_parts[@]}"; do
 		if ! [ '~' = "${dir_parts[$i]}" ] ; then
 			short_pwd+='/'
@@ -2008,6 +2012,7 @@ __powerline_shorten_dir_ellipse() {
 	# Laisser les deux derniers dossiers.
 	local last_index="$(( number_of_parts - 2 ))"
 
+	local part=
 	for part in "${dir_parts[@]:0:2}" $'\u2026' "${dir_parts[@]:$last_index}"; do
 		if ! [ '~' = "$part" ] ; then
 			short_pwd+=/
