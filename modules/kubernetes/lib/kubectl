@@ -1,7 +1,11 @@
 # vim: ft=sh
 
+# Default enable
+typeset -g PRDVTY_KUBERNETES_CONFIG_CHANGEWARN=${PRDVTY_KUBERNETES_CONFIG_CHANGEWARN:-true}
+typeset -g PRDVTY_KUBERNETES_CONFIG_CHANGE_ACTION=${PRDVTY_KUBERNETES_CONFIG_CHANGE_ACTION:-warn}
+
 # =============================================================================
-# kubectl and environment helpers 
+# kubectl and environment helpers
 function kubernetes::kubeconfigFind {
 	typeset path="$1"
 
@@ -36,8 +40,8 @@ function kubernetes::kubectl {
 	"$k" "$@"
 }
 
-# This function is valled by the shell PROMPT_COMMAND  to set env vars
-# among these, the path to the costs kubeconfig file
+# This function is called by the shell PROMPT_COMMAND  to set env vars
+# among these, the path to the last kubeconfig file
 typeset -gA __PRDVTY_KUBERNETES_CONFIG_PREV=()
 function kubernetes::envSet {
 
@@ -48,7 +52,7 @@ function kubernetes::envSet {
 		typeset kubeconfigPrev="${__PRDVTY_KUBERNETES_CONFIG_PREV[kubeconfig]}"
 		# Check if the variable was not touched outside of us
 		if [[ "$KUBECONFIG" != "$kubeconfigPrev" ]]; then
-			logInfo "Variable '$KUBECONFIG' has been changed outside of $BASH_SOURCE::$FUNCNAME. Disabling autodiscovery"
+			logInfo "Variable 'KUBECONFIG' has been changed outside of $BASH_SOURCE::$FUNCNAME. Disabling autodiscovery"
 			logInfo "To reenable autodiscovery, type 'unset KUBECONFIG'"
 			return
 		fi
@@ -59,6 +63,14 @@ function kubernetes::envSet {
 	# Do we have a kubeconfig file in our parent folders
 	typeset config="$(kubernetes::kubeconfigFind "$path")"
 	export KUBECONFIG="$config"
+
+	# if setting a new kubeconfig, save its modification time
+	if [[ -z "${__PRDVTY_KUBERNETES_CONFIG_PREV[kubeconfig]:-}" ]] ||
+	   [[ "${__PRDVTY_KUBERNETES_CONFIG_PREV[kubeconfig]}" != "$config" ]]; then
+
+		kubernetes::fileMTimeUpdate "$config"
+	fi
+
 	__PRDVTY_KUBERNETES_CONFIG_PREV[kubeconfig]="$KUBECONFIG"
 
 	# Set the cachedir to local tmp, in case of home in NFS
@@ -67,6 +79,92 @@ function kubernetes::envSet {
 	export KUBECACHEDIR="$cache"
 	__PRDVTY_KUBERNETES_CONFIG_PREV[kubecachedir]="$KUBECACHEDIR"
 
+}
+
+function kubernetes::envCheck {
+
+	# return early if no kubeconfig is set
+	if [[ -n "${KUBECONFIG:-}" ]] || [[ -s "$HOME/.kube/config" ]]; then
+		typeset    __oifs="$IFS" kcfile= kcfiles=()
+
+		IFS=':' read -ra kcfiles <<<"${KUBECONFIG-$HOME/.kube/config}"
+
+		# check every referenced or default kubeconfig
+		typeset -i ts=0 ret=0
+		for kcfile in "${kcfiles[@]}"; do
+
+			# Check if we can read it
+			if ! [[ -r "$kcfile" ]]; then
+				echo "# [!] WARNING: Referenced file '$kcfile' is not readable"
+				continue
+			fi
+
+			# Check its modification time
+			if ! ts=$(kubernetes::fileMTimeCheck "$kcfile"); then
+				kubernetes::fileChangedAction "$kcfile" "$ts"
+				ret+=$?
+				kubernetes::fileMTimeUpdate "$kcfile"
+			fi
+		done
+
+		# if a file changed, a return here will stop the command
+		return $ret
+	fi
+}
+
+typeset -gA __PRDVTY_KUBERNETES_FILE_MTIME=()
+function kubernetes::fileMTimeCheck {
+	typeset file="$1"
+
+	# Return early if file not readable
+	[[ -r "$file" ]] || return
+
+	typeset prevMTime="${__PRDVTY_KUBERNETES_FILE_MTIME[$file]:-}"
+	if [[ -n "$prevMTime" ]]; then
+		typeset currMTime="$(stat --format "%Y" "$file")"
+		echo "$prevMTime"
+		if [[ "$prevMTime" != "$currMTime" ]]; then
+			return 1
+		fi
+	fi
+
+	return
+}
+
+function kubernetes::fileMTimeUpdate {
+	typeset file="$1"
+
+	# if the file was removed, forget it
+	if ! [[ -r "$file" ]]; then
+		__PRDVTY_KUBERNETES_FILE_MTIME[$file]=""
+		return
+	else
+		__PRDVTY_KUBERNETES_FILE_MTIME[$file]="$(stat --format "%Y" "$file")"
+	fi
+}
+
+function kubernetes::fileChangedAction {
+	typeset file="$1"
+	typeset -i ts="${2:-0}"
+
+	typeset action="${PRDVTY_KUBERNETES_CONFIG_CHANGE_ACTION:-warn}"
+	case "$action" in
+		warn|stop)
+			typeset -i now="$(date +%s)"
+			echo "# [!] WARNING: File '$kcfile' changed since last command ($(($now - $ts)) sec ago)"
+			if [[ "$action" == "stop" ]]; then
+				echo "# [!] Execution of current command was stopped. Retry it if config change is ok"
+				return 1
+			fi
+			return
+			;;
+		ask)
+
+			;;
+		*)
+			echo >&2 "Unknown action '$action'"
+			;;
+	esac
 }
 
 # Init function: try to find kubectl, load completion, and register callback on
@@ -92,6 +190,7 @@ function kubernetes::envInit {
 
 
 		# Add our helpers. Commands like "klist" or "kdestroy" are kerberos...
+		alias kubesetns="kubernetes::configNsSet"
 		alias kubedebug="kubernetes::clusterDebug"
 		alias kubeinfo="kubernetes::clusterInto"
 		alias kubestatus="kubernetes::clusterStatus"
@@ -101,8 +200,26 @@ function kubernetes::envInit {
 		alias kubepods="kubernetes::clusterPodsList"
 
 		# Register our env func with prompt to check file at every path change
-		prdvty::shellPostExecRegister "kubernetes::envSet"
+		prdvty::shellPostExecRegister "before" "kubernetes::envSet"
+
+		# Register our env-check func before running
+		if [[ -n "${PRDVTY_KUBERNETES_CONFIG_CHANGEWARN:-}" ]] &&
+		   [[ "$PRDVTY_KUBERNETES_CONFIG_CHANGEWARN" == "true" ]]; then
+			prdvty::shellPreExecRegister "before" "kubernetes::envCheck"
+		fi
 	fi
+}
+
+# =============================================================================
+# kubeconfig helpers
+function kubernetes::configNsSet {
+	typeset ns="${1:-}"
+
+	if [[ -z "${KUBECONFIG}" ]]; then
+		logInfo "KUBECONFIG Variable is not set. Is a 'kubeconfig' file available in your cwd ?"
+		return 1
+	fi
+
 }
 
 
