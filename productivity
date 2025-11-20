@@ -100,6 +100,7 @@ typeset -a PRDVTY_PREEXECCB=() PRDVTY_POSTEXECCB=()
 
 
 function prdvty::shellPostExecRegister {
+
 	typeset where="$1"
 	case "$where" in
 		before)
@@ -118,7 +119,20 @@ function prdvty::shellPostExecRegister {
 }
 
 function prdvty::shellPreExecRegister {
-	PRDVTY_PREEXECCB+=("$*")
+	typeset where="$1"
+	case "$where" in
+		before)
+			shift
+			PRDVTY_PREEXECCB=("$*" "${PRDVTY_PREEXECCB[@]}")
+			;;
+		after)
+			shift
+			PRDVTY_PREEXECCB+=("$*")
+			;;
+		*)
+			PRDVTY_PREEXECCB+=("$*")
+			;;
+	esac
 }
 
 # preexec is called by bash "trap DEBUG". called before executing a cmd
