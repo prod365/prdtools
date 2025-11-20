@@ -1608,7 +1608,9 @@ __powerline_hostname_class() {
 
 	if [ "${USER-}" = "root" ] ; then
 		__powerline_retval=(root)
-	elif [ -v SSH_CLIENT ] ; then
+	elif [ -v SSH_CLIENT ] || [ -v SUDO_USER ]; then
+		__powerline_retval=(remote)
+	elif [[ "$(stat -c %U $(tty))" != "$USER" ]]; then
 		__powerline_retval=(remote)
 	else
 		case "$chassis" in

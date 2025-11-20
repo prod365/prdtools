@@ -27,6 +27,20 @@ function __powerline_segment_cmdtime {
 	fi
 }
 
+function __powerline_segment_time {
+	__powerline_retval=(":horloge:heure-fond:heure-texte:$(date +%H:%M:%S)")
+}
+
+
+function __powerline_segment_scheduler {
+	__powerline_retval=()
+	# Slurm
+	if [[ -n "${SLURM_JOB_ID:-}" ]]; then
+		__powerline_retval=("p:48;5;33:38;5;0::JobID $SLURM_JOB_ID $SLURM_JOB_CPUS_PER_NODE")
+	fi
+}
+
+
 # Register the powerline update func. __update_ps1
 if type -t "__update_ps1" >/dev/null 2>&1; then
 	prdvty::shellPostExecRegister "__update_ps1"
