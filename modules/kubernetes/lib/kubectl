@@ -74,7 +74,7 @@ function kubernetes::envSet {
 	__PRDVTY_KUBERNETES_CONFIG_PREV[kubeconfig]="$KUBECONFIG"
 
 	# Set the cachedir to local tmp, in case of home in NFS
-	typeset cache="/tmp/kubectl.cache.${USER:-$(whoami)}"
+	typeset cache="/tmp/kubectl.cache.${USER:-$(whoami)}/${KUBECONFIG//\//_}"
 	mkdir -p "$cache"
 	export KUBECACHEDIR="$cache"
 	__PRDVTY_KUBERNETES_CONFIG_PREV[kubecachedir]="$KUBECACHEDIR"
