@@ -41,11 +41,6 @@ function __powerline_segment_scheduler {
 }
 
 
-# Register the powerline update func. __update_ps1
-if type -t "__update_ps1" >/dev/null 2>&1; then
-	prdvty::shellPostExecRegister "__update_ps1"
-fi
-
 
 function prdvty::powerlineSegmentAdd {
 	typeset newSegment="$1"
@@ -99,3 +94,7 @@ prdvty::powerlineSegmentAdd "cmdtime" "status"
 POWERLINE_ICONS="auto"
 
 
+# Register the powerline update func. __update_ps1
+if type -t "__update_ps1" >/dev/null 2>&1; then
+	prdvty::shellPostExecRegister "__update_ps1"
+fi
