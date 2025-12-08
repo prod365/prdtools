@@ -1,0 +1,62 @@
+if [[ "$(uname -s)" == "Darwin" ]] || true; then
+
+	# stat wrapper between GNU Coreutils / BSD stat
+	function stat {
+		
+		typeset bsdOpts=()
+		typeset opt=
+
+
+		while [[ $# -gt 0 ]]; do
+			typeset opt="$1"
+			shift
+
+			case "$opt" in
+				-c|--format*|--printf*)
+					# handle the format "--format=fmt" or "--format fmt"
+					typeset val="${opt#*=}"
+					if [[ "$opt" == "$val" ]]; then
+						val="$1"
+						shift
+					fi
+
+					# Parse options
+					typeset valBsd=""
+					while [[ -n "$val" ]]; do
+						typeset char="${val:0:1}"
+						typeset -i nStrip=1
+
+						# If it's a parsable option
+						if [[ "$char" == "%" ]]; then
+							typeset charOpt="${val:1:1}"
+							nStrip+=1
+
+							case "$charOpt" in
+								U) valBsd+="%Su" ;;
+								*) valBsd+="%${charOpt}" ;;
+							esac
+						# Else, any other char. Just copy it
+						else
+							valBsd+="$char"
+						fi
+
+						# Trim the remaining values
+						val="${val:$nStrip}"
+					done
+
+					bsdOpts+=("-f" "$valBsd")
+					;;
+
+				# Unknown, just place it
+				*)
+					bsdOpts+=("$opt")
+					;;
+			esac
+		done
+
+		command stat "${bsdOpts[@]}"
+	}
+
+fi
+
+# vim: ft=sh
