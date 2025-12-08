@@ -47,12 +47,17 @@ if [ -e /proc/self/mountinfo ]; then
 	elif [ "$(awk '$5=="/"{print $4}' /proc/self/mountinfo)" != "/" ]; then
 		PRDVTY_RUNENV="chroot"
 	fi
-# No /proc/self/mountinfo entry just means /proc is not present.
 else
-	#  chroot
-	typeset rootinum="$(\stat -c %i /)"
-	if [ "$rootinum" -gt 1024 ]; then
-		PRDVTY_RUNENV="chroot"
+	if [[ -e /proc ]]; then
+		# No /proc/self/mountinfo entry just means /proc is not present.
+		#  chroot
+		typeset rootinum="$(\stat -c %i /)"
+		if [ "$rootinum" -gt 1024 ]; then
+			PRDVTY_RUNENV="chroot"
+		fi
+	else
+		# Non Linux environment (macos)
+		:
 	fi
 fi
 
