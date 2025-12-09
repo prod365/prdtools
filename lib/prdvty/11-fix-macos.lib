@@ -1,4 +1,4 @@
-if [[ "$(uname -s)" == "Darwin" ]] || true; then
+if [[ "$(uname -s)" == "Darwin" ]]; then
 
 	# stat wrapper between GNU Coreutils / BSD stat
 	function stat {
