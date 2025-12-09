@@ -1,3 +1,6 @@
 [submodule "modules/tools/libexec/parallel"]
 	path = modules/tools/libexec/parallel
 	url = https://github.com/saruspete/p5-parallel
+[submodule "lib/ammlib"]
+	path = lib/ammlib
+	url = https://github.com/saruspete/ammlib

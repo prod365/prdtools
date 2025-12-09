@@ -62,23 +62,30 @@ function kubernetes::envSet {
 
 	# Do we have a kubeconfig file in our parent folders
 	typeset config="$(kubernetes::kubeconfigFind "$path")"
-	export KUBECONFIG="$config"
 
-	# if setting a new kubeconfig, save its modification time
-	if [[ -z "${__PRDVTY_KUBERNETES_CONFIG_PREV[kubeconfig]:-}" ]] ||
-	   [[ "${__PRDVTY_KUBERNETES_CONFIG_PREV[kubeconfig]}" != "$config" ]]; then
+	if [[ -n "$config" ]]; then
 
-		kubernetes::fileMTimeUpdate "$config"
+		export KUBECONFIG="$config"
+
+		# if setting a new kubeconfig, save its modification time
+		if [[ -z "${__PRDVTY_KUBERNETES_CONFIG_PREV[kubeconfig]:-}" ]] ||
+		   [[ "${__PRDVTY_KUBERNETES_CONFIG_PREV[kubeconfig]}" != "$config" ]]; then
+
+			kubernetes::fileMTimeUpdate "$config"
+		fi
+
+		__PRDVTY_KUBERNETES_CONFIG_PREV[kubeconfig]="$KUBECONFIG"
+
+		# Set the cachedir to local tmp, in case of home in NFS
+		typeset cache="/tmp/kubectl.cache.${USER:-$(whoami)}/${KUBECONFIG//\//_}"
+		mkdir -p "$cache"
+		export KUBECACHEDIR="$cache"
+		__PRDVTY_KUBERNETES_CONFIG_PREV[kubecachedir]="$KUBECACHEDIR"
+	
+	else
+		unset KUBECONFIG KUBECACHEDIR
+		unset __PRDVTY_KUBERNETES_CONFIG_PREV[kubeconfig]
 	fi
-
-	__PRDVTY_KUBERNETES_CONFIG_PREV[kubeconfig]="$KUBECONFIG"
-
-	# Set the cachedir to local tmp, in case of home in NFS
-	typeset cache="/tmp/kubectl.cache.${USER:-$(whoami)}/${KUBECONFIG//\//_}"
-	mkdir -p "$cache"
-	export KUBECACHEDIR="$cache"
-	__PRDVTY_KUBERNETES_CONFIG_PREV[kubecachedir]="$KUBECACHEDIR"
-
 }
 
 function kubernetes::envCheck {
